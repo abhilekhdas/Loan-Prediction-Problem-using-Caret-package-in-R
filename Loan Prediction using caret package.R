@@ -38,3 +38,49 @@ predictors<-setdiff(names(trainSet),"Loan_Status")
 Loan_Pred_Profile<-rfe(trainSet[,predictors], trainSet[,"Loan_Status"],rfeControl = control)
 
 names(getModelInfo())#gives list of all ML algo's in caret package
+
+#using caret package any model can be applied by only changing the method in the train function
+model_rf<-train(trainSet[,predictors],trainSet[,"Loan_Status"],method='rf') #random forest
+model_nnet<-train(trainSet[,predictors],trainSet[,"Loan_Status"],method='nnet') #neuralnet
+model_glm<-train(trainSet[,predictors],trainSet[,"Loan_Status"],method='glm') #generalised linear model
+
+fitControl <- trainControl(
+  method = "repeatedcv",
+  number = 5,
+  repeats = 5)
+
+modelLookup(model = "gbm")
+
+#Creating grid for grid search
+grid<-expand.grid(n.trees=c(10,20,50,100,500,1000),shrinkage=c(0.01,0.05,0.1,0.5),
+                  n.minobsinnode = c(3,5,10),interaction.depth=c(1,5,10))
+
+#training the model
+model_gbm<-train(trainSet[,predictors], trainSet[,"Loan_Status"],method="gbm",trControl=fitControl,tuneGrid=grid)
+print(model_gbm)
+plot(model_gbm)
+#using tune length to train the model
+#in tune length instead of explicitly giving the parameters in grid search, 
+#any number of possible values for each tuning parameter through tuneLength can be given
+
+model_gbm<-train(trainSet[,predictors],trainSet[,"Loan_Status"],method="gbm",trControl=fitControl,tuneLength=10)
+print(model_gbm)
+plot(model_gbm)
+
+#variable importance using caret functions
+varImp(model_gbm)
+plot(varImp(model_gbm),main="GBM-Variable Importance")
+
+varImp(model_rf)
+plot(varImp(model_rf),main="Random forest-Variable Importance")
+
+varImp(model_nnet)
+plot(varImp(model_nnet),main="Neural Net-Variable Importance")
+
+varImp(object=model_glm)
+plot(varImp(object=model_glm),main="Generalized Linear Model-Variable Importance")
+
+#Predictions
+predictions<-predict.train(object = model_gbm,testSet[,predictors],type="raw")
+table(predictions)
+confusionMatrix(predictions,testSet[,"Loan_Status"])
